@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"log"
+
 	"github.com/haninamaryia/tax-calculator/internal/core"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,8 +81,10 @@ func TestFetchTaxBrackets(t *testing.T) {
 				apiURL = server.URL
 			}
 
+			// Create a new tax API client
 			client := NewTaxAPIClient(apiURL)
 
+			// Set up context with optional timeout
 			ctx := context.Background()
 			if tt.contextTimeout > 0 {
 				var cancel context.CancelFunc
@@ -88,8 +92,20 @@ func TestFetchTaxBrackets(t *testing.T) {
 				defer cancel()
 			}
 
+			// Log the start of the test
+			log.Printf("Starting test: %s\n", tt.name)
+
+			// Fetch tax brackets
 			brackets, err := client.FetchTaxBrackets(ctx, 2023)
 
+			// Log the response or error
+			if err != nil {
+				log.Printf("Error fetching tax brackets: %v\n", err)
+			} else {
+				log.Printf("Fetched tax brackets: %v\n", brackets)
+			}
+
+			// Assertions to check expected behavior
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -97,6 +113,9 @@ func TestFetchTaxBrackets(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedResult, brackets)
 			}
+
+			// Log the result of the test
+			log.Printf("Test %s completed\n", tt.name)
 		})
 	}
 }

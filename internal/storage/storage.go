@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/haninamaryia/tax-calculator/internal/core"
+	"github.com/haninamaryia/tax-calculator/internal/logger"
 )
 
 type TaxStorage interface {
@@ -23,7 +25,7 @@ type taxAPIClient struct {
 func NewTaxAPIClient(baseURL string) TaxStorage {
 	return &taxAPIClient{
 		baseURL: baseURL,
-		client:  &http.Client{Timeout: 5 * time.Second},
+		client:  &http.Client{Timeout: 10 * time.Second}, // Increased timeout for robustness
 	}
 }
 
@@ -31,31 +33,47 @@ func NewTaxAPIClient(baseURL string) TaxStorage {
 func (t *taxAPIClient) FetchTaxBrackets(ctx context.Context, year int) ([]core.TaxBracket, error) {
 	url := fmt.Sprintf("%s/tax-calculator/tax-year/%d", t.baseURL, year)
 
-	// Prepare the request with the provided context
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to create HTTP request")
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Make the API call
 	resp, err := t.client.Do(req)
 	if err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to make HTTP request")
 		return nil, fmt.Errorf("failed to fetch tax brackets: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Handle unexpected HTTP status codes
+	logger.Log.Info().Msgf("Received response status: %s", resp.Status)
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
+		body, _ := ioutil.ReadAll(resp.Body)
+		logger.Log.Warn().Msgf("Unexpected status code %d, response body: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected response status: %s. Response body: %s", resp.Status, string(body))
 	}
 
-	// Decode the JSON response
 	var response struct {
 		TaxBrackets []core.TaxBracket `json:"tax_brackets"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to read response body")
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	if err := json.Unmarshal(body, &response); err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to decode response body")
+		return nil, fmt.Errorf("failed to decode response body: %w", err)
+	}
+
+	if len(response.TaxBrackets) == 0 {
+		logger.Log.Warn().Msgf("Missing or invalid tax brackets in response: %s", string(body))
+		return nil, fmt.Errorf("missing or invalid tax brackets in the response: %s", string(body))
+	}
+
+	logger.Log.Info().Msgf("Fetched tax brackets for year %d successfully", year)
 	return response.TaxBrackets, nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/haninamaryia/tax-calculator/internal/core"
 	"github.com/haninamaryia/tax-calculator/internal/service"
+	"github.com/stretchr/testify/assert"
 )
 
 // Mock storage
@@ -23,6 +24,7 @@ func (m *mockStorage) FetchTaxBrackets(ctx context.Context, year int) ([]core.Ta
 }
 
 func TestCalculateTax(t *testing.T) {
+
 	tests := []struct {
 		name        string
 		incomeStr   string
@@ -87,6 +89,7 @@ func TestCalculateTax(t *testing.T) {
 				brackets: tt.brackets,
 				err:      tt.mockErr,
 			}
+
 			svc := service.NewTaxService(mock)
 			result, err := svc.CalculateTax(context.Background(), tt.incomeStr, tt.yearStr)
 
@@ -104,6 +107,62 @@ func TestCalculateTax(t *testing.T) {
 
 			if result.TotalTax != tt.expectTotal {
 				t.Errorf("expected total tax %v, got %v", tt.expectTotal, result.TotalTax)
+			}
+		})
+	}
+}
+
+func TestValidateTaxYear(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		year          string
+		expectedError string
+	}{
+		{
+			name:          "Valid tax year 2019",
+			year:          "2019",
+			expectedError: "",
+		},
+		{
+			name:          "Valid tax year 2020",
+			year:          "2020",
+			expectedError: "",
+		},
+		{
+			name:          "Valid tax year 2021",
+			year:          "2021",
+			expectedError: "",
+		},
+		{
+			name:          "Valid tax year 2022",
+			year:          "2022",
+			expectedError: "",
+		},
+		{
+			name:          "Invalid tax year 2023",
+			year:          "2023",
+			expectedError: "tax year 2023 is not supported",
+		},
+		{
+			name:          "Invalid tax year 2025",
+			year:          "2025",
+			expectedError: "tax year 2025 is not supported",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &mockStorage{}
+
+			svc := service.NewTaxService(mock)
+			err := svc.ValidateTaxYear(tt.year)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

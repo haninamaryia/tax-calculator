@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,7 +27,7 @@ func TestTaxHandler(t *testing.T) {
 	tests := []struct {
 		name           string
 		method         string
-		query          string
+		body           map[string]interface{}
 		mockFunc       func(ctx context.Context, incomeStr string, yearStr string) (core.TaxResult, error)
 		expectedCode   int
 		expectedBody   string
@@ -35,8 +37,8 @@ func TestTaxHandler(t *testing.T) {
 	}{
 		{
 			name:   "Success case",
-			method: "GET",
-			query:  "?income=10000&year=2023",
+			method: "POST",
+			body:   map[string]interface{}{"income": 10000.0, "year": 2022},
 			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
 				return core.TaxResult{
 					TotalTax:      1234.56,
@@ -59,23 +61,30 @@ func TestTaxHandler(t *testing.T) {
 			},
 		},
 		{
-			name:         "Missing query parameters",
-			method:       "GET",
-			query:        "?income=10000",
+			name:         "Missing body parameters",
+			method:       "POST",
+			body:         map[string]interface{}{}, // Missing income and year
 			expectedCode: http.StatusBadRequest,
-			expectedBody: "Missing required query parameters",
+			expectedBody: "Missing required fields",
+			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
+				return core.TaxResult{}, nil
+			},
 		},
+
 		{
 			name:         "Invalid income",
-			method:       "GET",
-			query:        "?income=abc&year=2023",
+			method:       "POST",
+			body:         map[string]interface{}{"income": "abc", "year": 2022}, // Invalid income format
 			expectedCode: http.StatusBadRequest,
 			expectedBody: "Invalid income",
+			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
+				return core.TaxResult{}, nil
+			},
 		},
 		{
 			name:   "Internal error from service",
-			method: "GET",
-			query:  "?income=10000&year=2023",
+			method: "POST",
+			body:   map[string]interface{}{"income": 10000.0, "year": 2022},
 			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
 				return core.TaxResult{}, errors.New("internal error")
 			},
@@ -85,16 +94,20 @@ func TestTaxHandler(t *testing.T) {
 		{
 			name:           "OPTIONS method",
 			method:         "OPTIONS",
-			query:          "",
 			expectedCode:   http.StatusNoContent,
-			expectedHeader: map[string]string{"Allow": "GET, OPTIONS"},
+			expectedHeader: map[string]string{"Allow": "POST, OPTIONS"},
+			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
+				return core.TaxResult{}, nil
+			},
 		},
 		{
 			name:           "Method not allowed",
-			method:         "POST",
-			query:          "",
+			method:         "GET",
 			expectedCode:   http.StatusMethodNotAllowed,
-			expectedHeader: map[string]string{"Allow": "GET, OPTIONS"},
+			expectedHeader: map[string]string{"Allow": "POST, OPTIONS"},
+			mockFunc: func(ctx context.Context, incomeStr, yearStr string) (core.TaxResult, error) {
+				return core.TaxResult{}, nil
+			},
 		},
 	}
 
@@ -103,7 +116,16 @@ func TestTaxHandler(t *testing.T) {
 			mock := &mockTaxCalculator{CalculateTaxFunc: tt.mockFunc}
 			handler := &TaxCalculatorHandler{tc: mock}
 
-			req := httptest.NewRequest(tt.method, "/tax"+tt.query, nil)
+			var reqBody io.Reader
+			if tt.body != nil {
+				b, _ := json.Marshal(tt.body)
+				reqBody = bytes.NewReader(b)
+			}
+
+			req := httptest.NewRequest(tt.method, "/tax", reqBody)
+			if tt.body != nil {
+				req.Header.Set("Content-Type", "application/json")
+			}
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)

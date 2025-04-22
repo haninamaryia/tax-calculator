@@ -4,11 +4,15 @@ import (
 	"log"
 
 	"github.com/haninamaryia/tax-calculator/internal/handler"
+	"github.com/haninamaryia/tax-calculator/internal/logger"
 	"github.com/haninamaryia/tax-calculator/internal/service"
 	"github.com/haninamaryia/tax-calculator/internal/storage"
 )
 
 func main() {
+	// Initialize logger before anything else
+	logger.InitLogger()
+
 	// Initialize the storage client that talks to the API
 	storageClient := storage.NewTaxAPIClient("http://localhost:5001")
 

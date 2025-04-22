@@ -1,0 +1,44 @@
+contracts:
+  - name: health_check
+    path: /healthz
+    method: GET
+    http_code_is: 200
+
+  - name: valid_tax_calculation
+    path: /tax
+    method: POST
+    request_body_is:
+      income: 60000
+      year: 2020
+    http_code_is: 200
+    response_body_contains: 'total_tax'
+
+  - name: invalid_year
+    path: /tax
+    method: POST
+    request_body_is:
+      income: 60000
+      year: 2018
+    http_code_is: 400
+
+  - name: invalid_income
+    path: /tax
+    method: POST
+    request_body_is:
+      income: -5000
+      year: 2020
+    http_code_is: 400
+
+  - name: missing_income
+    path: /tax
+    method: POST
+    request_body_is:
+      year: 2020
+    http_code_is: 400
+
+  - name: missing_year
+    path: /tax
+    method: POST
+    request_body_is:
+      income: 50000
+    http_code_is: 400

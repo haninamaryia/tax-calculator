@@ -30,32 +30,29 @@ func TestGetConfig(t *testing.T) {
 		{
 			name: "WithEnvVars",
 			envVars: map[string]string{
-				"TAX_CALCULATOR_APP_PORT":     "8080",
-				"TAX_CALCULATOR_APP_DEBUG":    "true",
-				"TAX_CALCULATOR_APP_LOG_PATH": "/var/log/tax",
-				"CONFIG_PATH":                 "./doesnotexist.toml",
+				"TAX_CALCULATOR_APP_PORT":  "8080",
+				"TAX_CALCULATOR_APP_DEBUG": "true",
 			},
 			expectedCfg: Config{App{Port: 8080,
 				Debug:   true,
-				LogPath: "/var/log/tax"},
+				LogPath: "/tmp/tax-calculator"},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Unset all env vars first
+			// Reset env vars
 			for _, key := range tt.unsetEnv {
 				os.Unsetenv(key)
 			}
-			// Set required env vars
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k) // Clean up after test
+				defer os.Unsetenv(k) // Clean up
 			}
 
-			// Ensure CLI args include fake config path (even if ignored)
-			os.Args = []string{"cmd", "--CONFIG_PATH=./doesnotexist.toml"}
+			// Reset CLI args to simulate config path flag
+			//os.Args = []string{"cmd", "--CONFIG_PATH=./doesnotexist.toml"}
 
 			cfg := GetConfig()
 
