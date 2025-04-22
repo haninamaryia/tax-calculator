@@ -96,7 +96,7 @@ func GetConfig() *Config {
 func bindFlag(v *viper.Viper) *viper.Viper {
 	flag := pflag.NewFlagSet(os.Args[0], pflag.ContinueOnError)
 
-	flag.IntP("App.Port", "p", 20000, "port of the app")
+	flag.IntP("App.Port", "p", 8080, "port of the app")
 	flag.DurationP("App.RunEvery", "f", 5*time.Minute, "frequency of exporting data")
 	flag.StringP("CONFIG_PATH", "c", fmt.Sprintf("/home/adbroker/c_delivery/%s.toml", dir), "location of the config file")
 
@@ -113,7 +113,7 @@ func bindFlag(v *viper.Viper) *viper.Viper {
 
 func bindDefault(v *viper.Viper) *viper.Viper {
 	// App defaults
-	v.SetDefault("App.Port", 20000)
+	v.SetDefault("App.Port", 8080)
 	v.SetDefault("App.Debug", false)
 	v.SetDefault("App.LogPath", "/tmp/tax-calculator")
 	return v

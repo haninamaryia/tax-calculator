@@ -22,7 +22,7 @@ func TestGetConfig(t *testing.T) {
 				"TAX_CALCULATOR_APP_LOG_PATH",
 				"CONFIG_PATH",
 			},
-			expectedCfg: Config{App{Port: 20000,
+			expectedCfg: Config{App{Port: 8080,
 				Debug:   false,
 				LogPath: "/tmp/tax-calculator",
 			}},
