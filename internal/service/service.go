@@ -33,10 +33,16 @@ func NewTaxService(s storage.TaxStorage) TaxService {
 // Business logic to calculate tax
 func (s *taxService) CalculateTax(ctx context.Context, incomeStr string, yearStr string) (core.TaxResult, error) {
 
+	// TODO: refactor this to be less redundant
 	// Validate the year first
 	if err := s.ValidateTaxYear(yearStr); err != nil {
 		logger.Log.Error().Err(err).Msgf("Invalid tax year: %s", yearStr)
 		return core.TaxResult{}, err
+	}
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		logger.Log.Error().Err(err).Msgf("Error parsing year: %s", yearStr)
+		return core.TaxResult{}, fmt.Errorf("error parsing year")
 	}
 
 	// Parse and validate input income
@@ -44,13 +50,6 @@ func (s *taxService) CalculateTax(ctx context.Context, incomeStr string, yearStr
 	if err != nil || income < 0 {
 		logger.Log.Error().Err(err).Msgf("Invalid income: %s", incomeStr)
 		return core.TaxResult{}, fmt.Errorf("invalid income")
-	}
-
-	// Parse and validate input year
-	year, err := strconv.Atoi(yearStr)
-	if err != nil || year < 2019 || year > 2022 {
-		logger.Log.Error().Err(err).Msgf("Unsupported year: %s", yearStr)
-		return core.TaxResult{}, fmt.Errorf("unsupported year")
 	}
 
 	// Fetch tax brackets from storage
@@ -63,6 +62,7 @@ func (s *taxService) CalculateTax(ctx context.Context, incomeStr string, yearStr
 	perBand := make(map[string]float64)
 	var totalTax float64
 
+	// TODO: put this in function and create unit test
 	// Calculate tax for each bracket
 	for _, b := range brackets {
 		if income <= b.Min {

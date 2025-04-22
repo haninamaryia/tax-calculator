@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -31,6 +31,8 @@ func NewTaxAPIClient(baseURL string) TaxStorage {
 
 // Fetch the tax brackets from the API for the specified year
 func (t *taxAPIClient) FetchTaxBrackets(ctx context.Context, year int) ([]core.TaxBracket, error) {
+
+	//TODO: put this in config
 	url := fmt.Sprintf("%s/tax-calculator/tax-year/%d", t.baseURL, year)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -49,7 +51,7 @@ func (t *taxAPIClient) FetchTaxBrackets(ctx context.Context, year int) ([]core.T
 	logger.Log.Info().Msgf("Received response status: %s", resp.Status)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		logger.Log.Warn().Msgf("Unexpected status code %d, response body: %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("unexpected response status: %s. Response body: %s", resp.Status, string(body))
 	}
@@ -58,7 +60,7 @@ func (t *taxAPIClient) FetchTaxBrackets(ctx context.Context, year int) ([]core.T
 		TaxBrackets []core.TaxBracket `json:"tax_brackets"`
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Log.Error().Err(err).Msg("Failed to read response body")
 		return nil, fmt.Errorf("failed to read response body: %w", err)

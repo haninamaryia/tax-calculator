@@ -30,6 +30,7 @@ type App struct {
 	Debug   bool   `mapstructure:"debug"`
 }
 
+// TODO: use zerolog here too
 // GetConfig initializes and returns the config
 func GetConfig() *Config {
 	v := viper.New()

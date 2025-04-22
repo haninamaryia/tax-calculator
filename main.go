@@ -17,6 +17,7 @@ func main() {
 	storageClient := storage.NewTaxAPIClient("http://localhost:5001")
 
 	// Initialize the tax service with the storage client
+	// TODO: when there is more config, pass the config here
 	taxService := service.NewTaxService(storageClient)
 
 	// Initialize the HTTP handler with the tax service
